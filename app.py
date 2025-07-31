@@ -230,8 +230,8 @@ def _start_ble_thread():
     connection_failed = False
     threading.Thread(target=_ble_thread, daemon=True).start()
 
-def _ensure_connection(timeout=3.0) -> bool:
-    """Ensure a BLE connection is established before sending commands."""
+def _ensure_connection(timeout: float = 8.0) -> bool:
+    """Ensure a BLE connection is active before issuing commands."""
     if connected:
         return True
 
@@ -242,7 +242,9 @@ def _ensure_connection(timeout=3.0) -> bool:
     while time.time() < end_time:
         if connected:
             return True
-        time.sleep(0.1)
+        time.sleep(0.2)
+
+    logging.warning("Timed out waiting for BLE reconnection")
     return False
 
 def _handle_disconnect(client):
