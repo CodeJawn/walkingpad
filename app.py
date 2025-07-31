@@ -230,6 +230,23 @@ def _start_ble_thread():
     connection_failed = False
     threading.Thread(target=_ble_thread, daemon=True).start()
 
+def _ensure_connection(timeout: float = 8.0) -> bool:
+    """Ensure a BLE connection is active before issuing commands."""
+    if connected:
+        return True
+
+    if not connecting:
+        _start_ble_thread()
+
+    end_time = time.time() + timeout
+    while time.time() < end_time:
+        if connected:
+            return True
+        time.sleep(0.2)
+
+    logging.warning("Timed out waiting for BLE reconnection")
+    return False
+
 def _handle_disconnect(client):
     """Callback function to handle unexpected disconnections."""
     global connected, belt_running, connecting, connection_failed
@@ -280,7 +297,7 @@ def start_session():
     global session_active, belt_running, current_distance_km, current_steps, current_calories, resume_speed_kmh
     global current_session_active_seconds
 
-    if not connected:
+    if not _ensure_connection():
         return redirect(url_for("root"))
 
     current_distance_km = current_steps = current_calories = 0.0
@@ -309,7 +326,7 @@ def start_session():
 @app.route("/pause_session", endpoint="pause_session")
 def pause_session():
     global belt_running, resume_speed_kmh
-    if not belt_running:
+    if not belt_running or not _ensure_connection():
         return redirect(url_for("root"))
     
     # Use the most recent speed from our history for manual pause
@@ -328,6 +345,9 @@ def resume_session():
     
     if not session_active: # Can't resume if no session was active
         logging.warning("Resume called but no active session.")
+        return redirect(url_for("root"))
+
+    if not _ensure_connection():
         return redirect(url_for("root"))
 
     if belt_running: # Already running, do nothing
@@ -374,7 +394,7 @@ def resume_session():
 @app.route("/decrease_speed")
 def decrease_speed():
     """Decrease the belt speed by one step."""
-    if not belt_running:
+    if not belt_running or not _ensure_connection():
         return redirect(url_for("root"))
 
     new_speed_kmh = max(MIN_SPEED_KMH, current_speed_kmh - SPEED_STEP)
@@ -385,7 +405,7 @@ def decrease_speed():
 @app.route("/slow_speed")
 def slow_speed():
     """Set the belt speed to a predefined slow walk speed."""
-    if not belt_running:
+    if not belt_running or not _ensure_connection():
         return redirect(url_for("root"))
     
     dev_speed = int(SLOW_WALK_SPEED_KMH * 10)
@@ -395,7 +415,7 @@ def slow_speed():
 @app.route("/increase_speed")
 def increase_speed():
     """Increase the belt speed by one step."""
-    if not belt_running:
+    if not belt_running or not _ensure_connection():
         return redirect(url_for("root"))
 
     new_speed_kmh = min(MAX_SPEED_KMH, current_speed_kmh + SPEED_STEP)
@@ -407,7 +427,7 @@ def increase_speed():
 @app.route("/max_speed")
 def max_speed():
     """Set the belt speed to maximum."""
-    if not belt_running:
+    if not belt_running or not _ensure_connection():
         return redirect(url_for("root"))
     
     dev_speed = int(MAX_SPEED_KMH * 10)
