@@ -85,15 +85,18 @@ async def _connect_to_pad() -> bool:
             dev = None
 
     if not dev:
-        logging.info("Scanning for device by name 'WalkingPad'...")
-        try:
-            dev = await BleakScanner.find_device_by_name("WalkingPad", timeout=10)
-        except Exception as exc:
-            logging.warning(f"Failed to find device by name: {exc}")
-            dev = None
+        device_names = ["WalkingPad", "KS-BLC2"]
+        for device_name in device_names:
+            logging.info(f"Scanning for device by name '{device_name}'...")
+            try:
+                dev = await BleakScanner.find_device_by_name(device_name, timeout=10)
+                if dev:
+                    break
+            except Exception as exc:
+                logging.warning(f"Failed to find device by name '{device_name}': {exc}")
 
     if not dev:
-        logging.error("Could not find WalkingPad. Ensure it is on and in range.")
+        logging.error("Could not find device. Ensure it is on and in range.")
         _pad_address = None
         return False
 
@@ -104,7 +107,7 @@ async def _connect_to_pad() -> bool:
     await controller.run(dev.address)
 
     if hasattr(controller, "client") and controller.client:
-        controller.client.set_disconnected_callback(_handle_disconnect)
+        controller.client.disconnected_callback = _handle_disconnect
 
     await controller.switch_mode(WalkingPad.MODE_MANUAL)
 
