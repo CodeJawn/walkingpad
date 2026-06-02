@@ -1,4 +1,5 @@
 import subprocess
+import sys
 import time
 import webbrowser
 
@@ -15,7 +16,7 @@ if __name__ == "__main__":
     
     # Start the Waitress server as a subprocess
     server_process = subprocess.Popen(
-        ["waitress-serve", f"--host={HOST}", f"--port={PORT}", "app:app"]
+        [sys.executable, "-m", "waitress", f"--host={HOST}", f"--port={PORT}", "app:app"]
     )
     
     # Give the server a moment to start up

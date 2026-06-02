@@ -68,11 +68,27 @@ This application relies heavily on the excellent **`ph4-walkingpad`** Python lib
 * Python 3.8 or newer.
 * A Bluetooth adapter on the computer running this application.
 * A compatible WalkingPad treadmill.
-* The `pip` package installer for Python.
+* [UV package manager](https://github.com/astral-sh/uv) for managing dependencies.
 
 ## Setup and Installation
 
-1.  **Clone the Repository (or download files):**
+### Using UV (Recommended)
+
+UV is a fast, reliable Python package installer and resolver. It automatically handles virtual environment management.
+
+1.  **Install UV:**
+    ```bash
+    # On macOS/Linux:
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+
+    # On Windows (with PowerShell):
+    powershell -ExecutionPolicy BypassUser -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+    # Or use pip/other package managers
+    pip install uv
+    ```
+
+2.  **Clone the Repository (or download files):**
     ```bash
     # If you have git installed:
     # git clone <your-repository-url>
@@ -80,52 +96,30 @@ This application relies heavily on the excellent **`ph4-walkingpad`** Python lib
     # Otherwise, download the files and navigate to the directory.
     ```
 
-2.  **Create a Python Virtual Environment:**
-    (Recommended to keep dependencies isolated)
-    Open a terminal or command prompt in the project directory:
+3.  **Install Dependencies:**
+    UV automatically creates and manages a virtual environment:
     ```bash
-    python -m venv venv
+    uv sync
     ```
-
-3.  **Activate the Virtual Environment:**
-    * On Windows:
-        ```cmd
-        venv\Scripts\activate
-        ```
-    * On macOS/Linux:
-        ```bash
-        source venv/bin/activate
-        ```
-    You should see `(venv)` at the beginning of your command prompt.
-
-4.  **Install Dependencies:**
-    With the virtual environment activated, install the required Python packages:
-    ```bash
-    pip install -r requirements.txt
-    ```
-    The `requirements.txt` file should contain:
-    ```
-    flask
-    bleak
-    ph4-walkingpad
-    waitress
-    ```
+    This reads `pyproject.toml` and installs all dependencies.
 
 ## Running the Application
 
 This application uses the `waitress` WSGI server for a more stable experience than Flask's built-in development server.
 
+### Using UV:
+
 1.  Ensure your WalkingPad is powered on and discoverable via Bluetooth.
-2.  Make sure your virtual environment is activated (see Step 3 above if it's not).
-3.  Run the application using the provided `run.py` script:
+2.  Run the application using UV:
     ```bash
-    python run.py
+    uv run python run.py
     ```
-4.  The script will start the `waitress` server and automatically open the application in your default web browser at `http://127.0.0.1:5000`.
-5.  The console window running `run.py` will display logs from the application. You can stop the server by pressing `Ctrl+C` in this window, or by using the "Close" button in the web application's header.
+    This automatically uses the UV-managed environment and runs `run.py`.
+3.  The script will start the `waitress` server and automatically open the application in your default web browser at `http://127.0.0.1:5000`.
+4.  The console window will display logs from the application. You can stop the server by pressing `Ctrl+C` or by using the "Close" button in the web application's header.
 
 **For easy launching on Windows:**
-A `start_app.bat` script is provided to automate VENV activation and running `run.py`. You can create a desktop shortcut pointing to this `.bat` file and configure the shortcut to run minimized. (Refer to previous instructions on how to do this).
+A `start_app.bat` script is provided to automate activating `.venv` and running `run.py`. You can create a desktop shortcut pointing to this `.bat` file and configure the shortcut to run minimized. (Refer to previous instructions on how to do this).
 
 ## How to Use
 
@@ -171,7 +165,7 @@ Some speed settings can be configured directly in `app.py`.  All speeds are set 
     * Ensure your computer's Bluetooth is turned on.
     * Make sure your WalkingPad is powered on and not connected to another device (like your phone's official app).
     * Try moving the WalkingPad or your computer closer to improve signal strength.
-    * Check the console window (where you ran `python run.py`) for error messages or detailed logs.
+    * Check the console window (where you ran `uv run python run.py`) for error messages or detailed logs.
 * **Icons Not Displaying:**
     * This application uses Bootstrap Icons loaded from a CDN. Ensure the computer running the browser has an internet connection. The link is `https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css`. If specific icons like `bi-turtle` or `bi-rabbit` are missing, the CDN version might be older than the version where those icons were introduced. Consider updating the version in the link in `base.html`.
 * **App Behavior:**
