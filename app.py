@@ -72,6 +72,73 @@ def inject_flags():
 
 
 # ── BLE helpers ─────────────────────────────────────────────────────────
+def _register_disconnect_callback(client):
+    # Bleak versions differ: some expose set_disconnected_callback(),
+    # while others only expose a callback attribute.
+    if hasattr(client, "set_disconnected_callback"):
+        client.set_disconnected_callback(_handle_disconnect)
+    elif hasattr(client, "disconnected_callback"):
+        try:
+            client.disconnected_callback = _handle_disconnect
+        except Exception as exc:
+            logging.warning(f"Could not set disconnected callback: {exc}")
+    else:
+        logging.warning("Bleak client does not expose a disconnected callback API.")
+
+
+async def _connect_controller_with_fallback(address: str) -> Controller | None:
+    """Connect controller, retrying with a descriptor-read-free init on failure."""
+    primary = Controller()
+    try:
+        await primary.run(address)
+        return primary
+    except Exception as exc:
+        logging.warning(f"Controller.run() failed, retrying with fallback init: {exc}")
+        try:
+            await primary.disconnect()
+        except Exception:
+            pass
+
+    fallback = Controller(do_read_chars=False)
+    try:
+        await fallback.connect(address)
+        client = fallback.client
+
+        try:
+            services = client.services
+        except Exception as exc:
+            logging.error(f"Fallback service discovery unavailable: {exc}")
+            await fallback.disconnect()
+            return None
+
+        for service in services:
+            for char in service.characteristics:
+                if char.uuid.startswith("0000fe01"):
+                    fallback.char_fe01 = char
+                if char.uuid.startswith("0000fe02"):
+                    fallback.char_fe02 = char
+
+        if not fallback.char_fe01 or not fallback.char_fe02:
+            logging.error("Fallback init failed: required WalkingPad characteristics not found.")
+            await fallback.disconnect()
+            return None
+
+        try:
+            await client.start_notify(fallback.char_fe01.uuid, fallback.notif_handler)
+        except Exception as exc:
+            logging.warning(f"Fallback notification setup failed: {exc}")
+
+        logging.info("Connected using fallback BLE init path.")
+        return fallback
+    except Exception as exc:
+        logging.error(f"Fallback BLE init failed: {exc}")
+        try:
+            await fallback.disconnect()
+        except Exception:
+            pass
+        return None
+
+
 async def _connect_to_pad() -> bool:
     global controller, _pad_address
     dev = None
@@ -100,11 +167,12 @@ async def _connect_to_pad() -> bool:
     _pad_address = dev.address
     logging.info(f"Device found! Address: {_pad_address}")
 
-    controller = Controller()
-    await controller.run(dev.address)
+    controller = await _connect_controller_with_fallback(dev.address)
+    if not controller:
+        return False
 
     if hasattr(controller, "client") and controller.client:
-        controller.client.set_disconnected_callback(_handle_disconnect)
+        _register_disconnect_callback(controller.client)
 
     await controller.switch_mode(WalkingPad.MODE_MANUAL)
 
@@ -161,9 +229,8 @@ def process_status_packet(dev_dist, dev_steps, dev_speed):
 
     # CUMULATIVE STATS LOGIC (is unchanged)
     # ...
-    if dev_dist < _last_dev_dist:
-        _last_dev_dist = 0
-    current_distance_km += (dev_dist - _last_dev_dist) / 100.0
+    # Device distance can reset or go backwards after reconnects; ignore negative deltas.
+    current_distance_km += max(0, dev_dist - _last_dev_dist) / 100.0
     _last_dev_dist = dev_dist
 
     if dev_steps < _last_dev_steps:
