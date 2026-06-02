@@ -27,13 +27,37 @@ KCAL_PER_MILE = 95  # rough kcal per mile
 # Speed control constants
 MAX_SPEED_KMH = 6.0  # Approx 3.7 mph, a common max for these pads
 MIN_SPEED_KMH = 1.0
-SPEED_STEP = 0.6  # Speed change per button press in km/h
-SLOW_WALK_SPEED_KMH = 4.5 # Approx 2.8 MPH
+SPEED_STEP = 0.5  # Speed change per button press in km/h
+IMPERIAL_SPEED_STEP_MPH = 0.5
+SLOW_WALK_SPEED_KMH = 2 # Approx 1.24 MPH
 
 
 
 def kcal_estimate(miles: float) -> float:
     return KCAL_PER_MILE * miles
+
+
+def _get_units() -> str:
+    units = request.args.get("units") or request.cookies.get("wp_units", "metric")
+    return "imperial" if units == "imperial" else "metric"
+
+
+def _to_device_speed(speed_kmh: float) -> int:
+    return int(round(speed_kmh * 10))
+
+
+def _next_speed_target_kmh(direction: int) -> float:
+    """Compute next target speed in km/h using 0.5 steps in active unit system."""
+    if _get_units() == "imperial":
+        current_mph = current_speed_kmh * KMH_TO_MPH
+        snapped_mph = round(current_mph / IMPERIAL_SPEED_STEP_MPH) * IMPERIAL_SPEED_STEP_MPH
+        next_mph = snapped_mph + (direction * IMPERIAL_SPEED_STEP_MPH)
+        next_kmh = next_mph / KMH_TO_MPH
+    else:
+        snapped_kmh = round(current_speed_kmh / SPEED_STEP) * SPEED_STEP
+        next_kmh = snapped_kmh + (direction * SPEED_STEP)
+
+    return min(MAX_SPEED_KMH, max(MIN_SPEED_KMH, next_kmh))
 
 # In app.py
 def format_seconds_to_hms(total_seconds):
@@ -325,8 +349,8 @@ def root():
 
     return render_template(
         template,
-        speed=current_speed_kmh * KMH_TO_MPH,
-        distance=current_distance_km * KM_TO_MI,
+        speed=current_speed_kmh,
+        distance=current_distance_km,
         steps=current_steps,
         calories=current_calories,
         time_active=time_active_display 
@@ -444,8 +468,8 @@ def decrease_speed():
     if not belt_running:
         return redirect(url_for("root"))
 
-    new_speed_kmh = max(MIN_SPEED_KMH, current_speed_kmh - SPEED_STEP)
-    dev_speed = int(new_speed_kmh * 10)
+    new_speed_kmh = _next_speed_target_kmh(-1)
+    dev_speed = _to_device_speed(new_speed_kmh)
     asyncio.run_coroutine_threadsafe(controller.change_speed(dev_speed), ble_loop)
     return redirect(url_for("root"))
 
@@ -455,7 +479,7 @@ def slow_speed():
     if not belt_running:
         return redirect(url_for("root"))
     
-    dev_speed = int(SLOW_WALK_SPEED_KMH * 10)
+    dev_speed = _to_device_speed(SLOW_WALK_SPEED_KMH)
     asyncio.run_coroutine_threadsafe(controller.change_speed(dev_speed), ble_loop)
     return redirect(url_for("root"))
 
@@ -465,8 +489,8 @@ def increase_speed():
     if not belt_running:
         return redirect(url_for("root"))
 
-    new_speed_kmh = min(MAX_SPEED_KMH, current_speed_kmh + SPEED_STEP)
-    dev_speed = int(new_speed_kmh * 10)
+    new_speed_kmh = _next_speed_target_kmh(1)
+    dev_speed = _to_device_speed(new_speed_kmh)
     asyncio.run_coroutine_threadsafe(controller.change_speed(dev_speed), ble_loop)
     return redirect(url_for("root"))
 
@@ -477,7 +501,7 @@ def max_speed():
     if not belt_running:
         return redirect(url_for("root"))
     
-    dev_speed = int(MAX_SPEED_KMH * 10)
+    dev_speed = _to_device_speed(MAX_SPEED_KMH)
     asyncio.run_coroutine_threadsafe(controller.change_speed(dev_speed), ble_loop)
     return redirect(url_for("root"))
 
@@ -491,8 +515,8 @@ def stats_json():
     data = dict(
         is_connected=connected,      
         is_running=belt_running,     
-        speed=round(current_speed_kmh * KMH_TO_MPH, 1),
-        distance=round(current_distance_km * KM_TO_MI, 2),
+        speed=round(current_speed_kmh, 1),
+        distance=round(current_distance_km, 2),
         steps=current_steps,
         calories=round(current_calories),
         time_active=formatted_time_active 

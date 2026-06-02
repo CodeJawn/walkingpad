@@ -112,6 +112,7 @@
             </a>
 
             <div class="d-flex align-items-center gap-4">
+                <button id="unit-toggle" class="btn btn-header-close" title="Toggle units">km</button>
                 <button id="shutdown-button" class="btn btn-header-close">Close</button>
                 
                 <div class="connection-indicator">
@@ -138,6 +139,76 @@
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+    // ── Unit toggle (metric / imperial) ──────────────────────────────────
+    const KM_TO_MI   = 0.621371;
+
+    function getUnits() {
+      return localStorage.getItem('wp_units') || 'metric';
+    }
+
+    function persistUnits(units) {
+      localStorage.setItem('wp_units', units);
+      document.cookie = `wp_units=${units}; path=/; max-age=31536000; SameSite=Lax`;
+    }
+
+    function applyUnits(units) {
+      const btn = document.getElementById('unit-toggle');
+      if (!btn) return;
+      if (units === 'imperial') {
+        btn.textContent = 'Metric';
+        btn.title = 'Switch to metric';
+      } else {
+        btn.textContent = 'Imperial';
+        btn.title = 'Switch to imperial';
+      }
+      // Update every element that carries raw metric values in data- attrs
+      document.querySelectorAll('[data-speed-kmh]').forEach(el => {
+        const v = parseFloat(el.dataset.speedKmh);
+        el.textContent = units === 'imperial'
+          ? (v * KM_TO_MI).toFixed(1) + ' mph'
+          : v.toFixed(1) + ' km/h';
+      });
+      document.querySelectorAll('[data-dist-km]').forEach(el => {
+        const v = parseFloat(el.dataset.distKm);
+        el.textContent = units === 'imperial'
+          ? (v * KM_TO_MI).toFixed(2) + ' mi'
+          : v.toFixed(2) + ' km';
+      });
+    }
+
+    // Expose a helper for the polling scripts to call after each update
+    function updateStatDisplay(id, rawKmhOrKm, type) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const units = getUnits();
+      if (type === 'speed') {
+        el.dataset.speedKmh = rawKmhOrKm;
+        el.textContent = units === 'imperial'
+          ? (rawKmhOrKm * KM_TO_MI).toFixed(1) + ' mph'
+          : rawKmhOrKm.toFixed(1) + ' km/h';
+      } else {
+        el.dataset.distKm = rawKmhOrKm;
+        el.textContent = units === 'imperial'
+          ? (rawKmhOrKm * KM_TO_MI).toFixed(2) + ' mi'
+          : rawKmhOrKm.toFixed(2) + ' km';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      const units = getUnits();
+      persistUnits(units);
+      applyUnits(units);
+      const btn = document.getElementById('unit-toggle');
+      if (btn) {
+        btn.addEventListener('click', function() {
+          const next = getUnits() === 'metric' ? 'imperial' : 'metric';
+          persistUnits(next);
+          applyUnits(next);
+        });
+      }
+    });
+    // ─────────────────────────────────────────────────────────────────────
+
     document.getElementById('shutdown-button').addEventListener('click', function(e) {
       e.preventDefault();
       if (confirm('Are you sure you want to shut down the server?')) {
