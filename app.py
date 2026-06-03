@@ -2,8 +2,6 @@ import asyncio
 import logging
 import os
 import threading
-import webbrowser
-from threading import Timer
 import time
 from collections import deque
 
