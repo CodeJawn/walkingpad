@@ -55,4 +55,9 @@ packages = []
 managed = true
 
 [tool.uv.pip]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.5",
+]
 # Pip configuration for UV
