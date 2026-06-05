@@ -1,0 +1,62 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "walkingpad"
+version = "0.1.0"
+description = "Flask web interface for controlling WalkingPad treadmills via Bluetooth"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "GPL-3.0"}
+authors = [
+    {name = "WalkingPad"}
+]
+keywords = ["walkingpad", "bluetooth", "treadmill", "fitness"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Web Environment",
+    "Framework :: Flask",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Home Automation",
+]
+
+dependencies = [
+    "flask",
+    "ph4-walkingpad",
+    "waitress",
+    "bleak",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/walkingpad/web-interface"
+Repository = "https://github.com/walkingpad/web-interface"
+
+[tool.setuptools]
+packages = []
+
+[tool.uv]
+# UV configuration
+managed = true
+
+[tool.uv.pip]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.5",
+    "ruff>=0.15.15",
+]
+# Pip configuration for UV

@@ -13,13 +13,13 @@
         <div class="col-lg col-md-4 col-6">
             <div class="stat-card">
                 <p class="stat-label">Speed</p>
-                <p class="stat-value" id="speed">0.0 mph</p>
+                <p class="stat-value" id="speed" data-speed-kmh="0">0.0 km/h</p>
             </div>
         </div>
         <div class="col-lg col-md-4 col-6">
             <div class="stat-card">
                 <p class="stat-label">Distance</p>
-                <p class="stat-value" id="distance">{{ "%.2f"|format(distance) }} mi</p>
+                <p class="stat-value" id="distance" data-dist-km="{{ "%.2f"|format(distance) }}">{{ "%.2f"|format(distance) }} km</p>
             </div>
         </div>
         <div class="col-lg col-md-4 col-6">

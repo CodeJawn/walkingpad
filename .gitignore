@@ -1,4 +1,13 @@
 /.venv
+/venv
 *.pyc
-__pycache__
+__pycache__/
+*.egg-info/
+dist/
+build/
 icon.ico
+
+# UV-specific
+/.uv/
+.uv/
+uv.lock
